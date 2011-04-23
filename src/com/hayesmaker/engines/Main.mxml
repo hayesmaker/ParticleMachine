@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   creationComplete="init()">
+	<fx:Script>
+	<![CDATA[
+		import com.hayesmaker.particles.Emitter;
+		import com.hayesmaker.particles.ParticleShape;
+		import com.utils.Stats;
+		import flash.display.Bitmap;
+		import flash.display.Loader;
+		import flash.display.Sprite;
+		import flash.events.DataEvent;
+		import flash.events.Event;
+		import flash.events.MouseEvent;
+		import flash.geom.Point;
+		import flash.net.FileFilter;
+		import flash.net.FileReference;
+		import flash.net.FileReferenceList;
+		import mx.accessibility.UIComponentAccProps;
+		import mx.controls.Alert;
+		import mx.controls.ColorPicker;
+		import mx.core.UIComponent;
+		import mx.events.ColorPickerEvent;
+		import mx.events.ItemClickEvent;
+		import spark.events.*;
+		[Bindable]
+		public var emitter:Emitter;
+		private var _stats:Stats;
+		private var _fileRef:FileReference;
+
+		public function init():void {
+			if (stage) stageInit();
+			else addEventListener(Event.ADDED_TO_STAGE, stageInit);
+		}
+		
+		private function stageInit(e:Event=null):void 
+		{
+			removeEventListener(Event.ADDED_TO_STAGE, stageInit);
+			emitter = new Emitter();
+			emitter.buttonMode = false;
+			particleArea.addChild(emitter);
+			emitter.isRunning = true;
+			_stats = new Stats();
+			particleArea.addChild(_stats);
+			stage.addEventListener(Event.RESIZE, onStageResize);
+			refreshParticleCanvas();
+		}
+		
+		private function onStageResize(e:Event):void 
+		{
+			refreshParticleCanvas(); 
+		}
+		
+		private function refreshParticleCanvas():void 
+		{
+			emitter.canvasWidth = particlePanel.getLayoutBoundsWidth(true);
+			emitter.canvasHeight = particlePanel.getLayoutBoundsHeight(true);
+			emitter.bounds = new Point(particlePanel.getLayoutBoundsX(true), particlePanel.getLayoutBoundsY(true));
+		}
+		
+		public function pauseResumeEmitter():void 
+		{
+			emitter.isRunning = !emitter.isRunning;
+			emitter.isRunning ? startPauseBtn.label = "Pause" : startPauseBtn.label = "Start";
+		}
+		
+		public function colourChangeHandler(e:ColorPickerEvent):void 
+		{
+			var colourPicker:ColorPicker = e.currentTarget as ColorPicker;
+			switch(colourPicker.id) 
+			{
+				case "backgroundPicker" :
+				particlePanel.setStyle("backgroundColor", colourPicker.selectedColor);
+				break;
+				case "particlePicker" :
+				emitter.particleColour = colourPicker.selectedColor;
+				break;
+			}
+        }
+		 
+		private function onSizeChange(e:IndexChangeEvent):void 
+		{
+			trace(sizeCombo.selectedItem);
+			emitter.particleSize = sizeCombo.selectedItem;
+		}
+		 
+		private function handleShapesListClick(e:ItemClickEvent):void 
+		{
+			trace(shapesList.selectedValue);
+			emitter.particleShape = shapesList.selectedValue as String;
+		}
+		
+		private function loadParticleImage():void {
+			_fileRef = new FileReference();
+			var imageTypes:FileFilter = new FileFilter("Images (*.jpg, *.jpeg, *.gif, *.png)", "*.jpg;*.jpeg;*.gif;*.png");
+			_fileRef.addEventListener(Event.COMPLETE, onImageLoaded);
+			_fileRef.addEventListener(Event.SELECT, onImageSelected);
+			_fileRef.browse([imageTypes]);
+		}
+		
+		private function onImageSelected(e:Event):void 
+		{
+			trace("image selected");
+			_fileRef.load();
+		}
+		
+		private function onImageLoaded(e:Event):void 
+		{
+			var loader:Loader = new Loader();
+			loader.contentLoaderInfo.addEventListener(Event.COMPLETE, delegateSelectedImages);
+			loader.loadBytes(_fileRef.data);
+		}
+		
+		private function delegateSelectedImages(e:Event):void 
+		{
+			trace("delegateSelectedImages");
+			var bmp:Bitmap = new Bitmap( e.target.content.bitmapData );
+			emitter.userBitmap = bmp;
+		}
+	]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<s:RadioButtonGroup id="shapesList" itemClick="handleShapesListClick(event)" />
+	</fx:Declarations>
+	<s:VGroup width="100%" height="100%">
+		<s:Panel title="Particle Machine v1.0" width="100%">
+			<s:HGroup paddingTop="10" paddingLeft="10" paddingBottom="10">
+				<s:Button id="startPauseBtn" label="Pause" width="100" height="50" click="pauseResumeEmitter()"  />
+				<s:VGroup paddingLeft="30" paddingRight="30">
+				<s:HGroup>
+					<s:HSlider id="windSlider" minimum="-100" maximum="100" change="emitter.wind=int(event.currentTarget.value)"  />
+					<s:Label text="Wind: {Math.round(windSlider.value)}"/>
+				</s:HGroup>
+				<s:HGroup>
+					<s:HSlider id="gravitySlider" value="50" minimum="-100" maximum="100" change="emitter.gravity=int(event.currentTarget.value)" />
+					<s:Label text="Gravity: {Math.round(gravitySlider.value)}"/>
+				</s:HGroup>
+				<s:HGroup>
+					<s:HSlider id="spraySlider" value="10" minimum="0" maximum="100" change="emitter.spray=int(event.currentTarget.value)" />
+					<s:Label text="Spray: {Math.round(spraySlider.value)}"/>
+				</s:HGroup>
+				<s:HGroup>
+					<s:HSlider id="frictionSlider" value="0" minimum="0" maximum="1" stepSize="0.01" change="emitter.friction=event.currentTarget.value" />
+					<s:Label text="Friction: {frictionSlider.value}"/>
+				</s:HGroup>
+				<s:HGroup>
+					<mx:TextInput text="50" id="particlesPerFrame" restrict="0-9" maxChars="3" keyFocusChange="emitter.particlesPerFrame = uint(particlesPerFrame.text);" />
+					<mx:Label text="Max Particles"/>
+				</s:HGroup>
+				</s:VGroup>
+				<s:VGroup>
+				<s:VGroup>
+					<s:Label text="Colours" />
+					<s:HGroup>
+						<mx:ColorPicker selectedColor="0xffffff" id="backgroundPicker" change="colourChangeHandler(event)" />
+						<s:Label text="Background"/>
+					</s:HGroup>
+					<s:HGroup>
+						<mx:ColorPicker selectedColor="0x000000" id="particlePicker" change="colourChangeHandler(event)" />
+						<s:Label text="Particles"/>
+					</s:HGroup>
+					<s:HGroup>
+						<s:CheckBox label="Random Colours" selected="false" click="emitter.randomColourMode = event.target.selected"/>
+					</s:HGroup>
+				</s:VGroup>
+				</s:VGroup>
+				<s:VGroup>
+					<s:Label text="Shape" />
+					<s:RadioButton group="{shapesList}" label="Square" id="squareCheck" value="SQUARE" selected="true" />
+					<s:RadioButton group="{shapesList}" label="Circle" id="circleCheck" value="CIRCLE" />
+					<s:CheckBox label="Rotation" id="rotationCheckBox" selected="false" change="emitter.particlesShouldRotate = event.target.selected"/>
+					<s:CheckBox label="Blur" selected="false" change="emitter.particleBlurring = event.target.selected"/>
+				</s:VGroup>
+				<s:VGroup>
+					<s:Label text="Size" />
+					<s:ComboBox id="sizeCombo" width="75" change="onSizeChange(event)" selectedIndex="3">
+						<s:dataProvider>
+							<mx:ArrayList>
+								<fx:int>1</fx:int>
+								<fx:int>2</fx:int>
+								<fx:int>3</fx:int>
+								<fx:int>4</fx:int>
+								<fx:int>5</fx:int>
+								<fx:int>6</fx:int>
+								<fx:int>7</fx:int>
+								<fx:int>8</fx:int>
+								<fx:int>9</fx:int>
+								<fx:int>10</fx:int>
+								<fx:int>11</fx:int>
+								<fx:int>12</fx:int>
+								<fx:int>13</fx:int>
+								<fx:int>14</fx:int>
+								<fx:int>15</fx:int>
+								<fx:int>30</fx:int>
+								<fx:int>60</fx:int>
+							</mx:ArrayList>
+						</s:dataProvider>
+					</s:ComboBox>
+				</s:VGroup>
+				<s:Button label="Load Particle Image" click="loadParticleImage()" />
+				<s:VGroup>
+					<s:CheckBox label="Stats" selected="true" change="_stats.visible = !_stats.visible"/>
+				</s:VGroup>
+			</s:HGroup>
+		</s:Panel>
+		<s:Panel id="particlePanel" title="Particle Canvas" width="100%" height="100%">
+			<s:Label text="Particles: {emitter.actualParticles}" x="100" />
+			<s:SpriteVisualElement id="particleArea" />
+		</s:Panel>
+	</s:VGroup>
+</s:Application>

@@ -1,0 +1,27 @@
+particle engine 
+
+per emmitter:
+	start/stop
+	
+	wind -100 + 100
+	gravity -100 +100
+	spray range -100 + 100
+	particles/sec 1-500
+	control
+	
+per particle:
+	size -100 + 100 
+	colour
+	shape
+
+add emitter
+
+export xml
+import xml
+import image
+export image
+
+change canvas size
+bitmap / vector mode
+
+
