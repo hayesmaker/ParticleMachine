@@ -7,3 +7,5 @@ Interface for customising your partical animation and a canvas to see the animat
 	- satisfy your partical animation urges
 
 Comments / Collaboration / Feedback / Contributions welcome
+
+-Runnable Here: http://www.andy-hayes.com/ParticleMachine/bin/
